@@ -14,7 +14,7 @@ var effective_image_width = 1600;
 var effective_image_height = 900;
 
 var ROICount = 0;
-var activeROI = {};
+var activeROI = {width:32,height:32,rotation:0};
 var activeTransfom = [];
 var img_from = [{x:0,y:0},{x:0,y:31},{x:31,y:0},{x:31,y:31}];
 
@@ -94,15 +94,15 @@ function getTransformedPosition(untransformed){
       Q[i] = temp; 
     }
   var transformed = {}
-  transformed.x = Q[0];
-  transformed.y = Q[1];
+  transformed.x = Math.round(Q[0]);
+  transformed.y = Math.round(Q[1]);
   // console.log(transformed);
   return transformed;
 }
 
 function addROI(){
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
-  // cleanActiveTransform();
+  cleanActiveTransform();
   const matrix =  getRoundedTransform();
   console.log("add ROI with 3D transform");
   const roi = document.createElement("div");
@@ -111,18 +111,20 @@ function addROI(){
   roi.id = "roi" + (ROICount + 1);
   ROICount += 1;
   const t = document.createElement("p");
-  t.innerHTML = roi.id + "<hr>" + matrix;
+  const roi_size = " "+activeROI.width+"x"+activeROI.height+" ";
+  t.innerHTML = roi.id + roi_size + "<hr>" + matrix;
   roi.appendChild(t);
   const i = document.createElement("canvas");
   i.id = roi.id + "_cv"
-  i.width = 128;
-  i.height = 128;
+  i.width = activeROI.width*2;
+  i.height = activeROI.height*2;
   var ctx = i.getContext("2d");
+  ctx.scale(2, 2);
   var source_img = document.getElementById("full-image");
-  for(_x=0;_x<32;_x++)
+  for(_x=0;_x<activeROI.width;_x++)
     {
     var temp = 0; 
-    for(_y=0;_y<32;_y++) {
+    for(_y=0;_y<activeROI.height;_y++) {
       var pixel = getTransformedPosition({x:_x,y:_y});
       ctx.drawImage(source_img,pixel.x,pixel.y, 1, 1, _x, _y, 1, 1);
     }
@@ -133,7 +135,7 @@ function addROI(){
 
 function drawCircle(x, y, radius) {
   var ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#c757e7";
+  ctx.fillStyle = "#757515";
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, 2 * Math.PI);
   ctx.fill();
@@ -153,8 +155,8 @@ function drawOverlayInCanvas()
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
   ctx.lineWidth = "6";
-  ctx.fillStyle = "rgba(199, 87, 231, 0.2)";
-  ctx.strokeStyle = "#c757e7";
+  ctx.fillStyle = "rgba(221, 221, 21, 0.2)";
+  ctx.strokeStyle = "#757515";
 
   ctx.moveTo(activeROI.tl.x, activeROI.tl.y);
   ctx.lineTo(activeROI.bl.x, activeROI.bl.y);
@@ -163,7 +165,7 @@ function drawOverlayInCanvas()
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "rgba(199, 87, 231, 0.9)";
+  ctx.fillStyle = "rgba(221, 21, 221, 0.8)";
   ctx.font = "50px Arial";
   ctx.fillText(activeROI.tl.x+","+activeROI.tl.y, activeROI.tl.x - 200, activeROI.tl.y - 30,140);
   ctx.fillText(activeROI.bl.x+","+activeROI.bl.y, activeROI.bl.x - 200, activeROI.bl.y + 30,140);
@@ -172,12 +174,15 @@ function drawOverlayInCanvas()
   drawHandles();
 
   var offset_y = activeROI.br.y > activeROI.bl.y ? activeROI.br.y + 20 :  activeROI.bl.y +20;
+  if (offset_y>700){
+    offset_y = activeROI.tr.y < activeROI.tl.y ? activeROI.tr.y - 60 :  activeROI.tl.y - 60;
+  }
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   var source_img = document.getElementById("full-image");
-  for(_x=0;_x<32;_x++)
+  for(_x=0;_x<activeROI.width;_x++)
     {
     var temp = 0; 
-    for(_y=0;_y<32;_y++) {
+    for(_y=0;_y<activeROI.height;_y++) {
       var pixel = getTransformedPosition({x:_x,y:_y});
       ctx.drawImage(source_img,pixel.x,pixel.y, 1, 1, _x + activeROI.bl.x, offset_y + _y + 10, 1, 1);
     }
@@ -304,9 +309,66 @@ function initCanvas(){
 
 function initRect(){
   activeROI.tl = {x:0,y:0};
-  activeROI.bl = {x:0,y:31};
-  activeROI.br = {x:31,y:31};
-  activeROI.tr = {x:31,y:0};
+  activeROI.bl = {x:0,y:activeROI.height-1};
+  activeROI.br = {x:activeROI.width-1,y:activeROI.height-1};
+  activeROI.tr = {x:activeROI.width-1,y:0};
+}
+
+function getKeypress(e) {
+  // console.l og(e.code);
+  if(e.code == "KeyR"){
+    console.log(activeTransfom);
+    activeROI.rotation += 0.1;
+    if(e.shiftKey){
+      activeROI.rotation -= 0.2;
+    }
+    activeTransfom[0][0] = (Math.cos(activeROI.rotation)).toString();
+    activeTransfom[0][1] = (Math.sin(activeROI.rotation)).toString();
+    activeTransfom[1][0] = (-1 * Math.sin(activeROI.rotation)).toString();
+    activeTransfom[1][1] = (Math.cos(activeROI.rotation)).toString();
+    activeROI.tl =  getTransformedPosition({x:0,y:0});
+    activeROI.bl =  getTransformedPosition({x:0,y:activeROI.height-1});
+    activeROI.br =  getTransformedPosition({x:activeROI.width-1,y:activeROI.height-1});
+    activeROI.tr =  getTransformedPosition({x:activeROI.width-1,y:0});
+    drawOverlayInCanvas();
+    console.log(activeTransfom);
+  }
+}
+
+function resetTransformInPosition(){
+  // console.log(activeTransfom);
+  activeTransfom[0][0] = "1";
+  activeTransfom[0][1] = "0";
+  activeTransfom[1][0] = "0";
+  activeTransfom[1][1] = "1";
+  const x = Number(activeTransfom[3][0]);
+  const y = Number(activeTransfom[3][1]);
+  activeROI.tl.x = x;
+  activeROI.tl.y = y;
+  activeROI.bl.x = x;
+  activeROI.bl.y = y + activeROI.height;
+  activeROI.br.x = x + activeROI.width;
+  activeROI.br.y = y + activeROI.height;
+  activeROI.tr.x = x + activeROI.width;
+  activeROI.tr.y = y;
+  // console.log(activeTransfom);
+  drawOverlayInCanvas();
+}
+
+function changeROIw(sender){
+  activeROI.width = Number(document.getElementById("roi_w").value);
+  updateAddROI_btn();
+}
+
+function changeROIh(sender){
+  activeROI.height = Number(document.getElementById("roi_h").value);
+  updateAddROI_btn();
+}
+
+function updateAddROI_btn(){
+  img_from = [{x:0,y:0},{x:0,y:activeROI.height-1},{x:activeROI.width-1,y:0},{x:activeROI.width-1,y:activeROI.height-1}];
+  document.getElementById("addROI_btn").innerHTML = "Add ROI " + activeROI.width + "x" + activeROI.height;
+  resetTransformInPosition();
 }
 
 function init(){
@@ -316,6 +378,7 @@ function init(){
   canvas.addEventListener('touchstart', mouseDown);
   canvas.addEventListener('touchmove', mouseMove);
   canvas.addEventListener('touchend', mouseUp);
+  window.addEventListener("keydown", getKeypress);
   initCanvas();
   initRect();
   drawOverlayInCanvas();
@@ -323,6 +386,3 @@ function init(){
 }
 
 window.addEventListener('load',init)
-// window.addEventListener('resize',repositionCanvas)
-
-//

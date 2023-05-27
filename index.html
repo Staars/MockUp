@@ -39,6 +39,8 @@
     }
     .green {
     background-color: rgba(221, 221, 221, 0.76);
+    color: gray;
+    font-size: inherit;
     }
     .roi {
     background-color: rgba(221, 221, 221, 0.76);
@@ -54,6 +56,7 @@
     padding: 5px;
     border-radius: 1rem;
     text-align: center;
+    color: gray;
     }
     .parent {
     display: flex;
@@ -93,7 +96,10 @@
         </div>
         <div class="box green">Tools<hr>
             <p id="image-size"></p>
-            <button class="parent blue" onclick="addROI()">
+            <p>ROI which will be the input tensor for TFL</p>
+            ROI-width:<input type="form" id="roi_w" min="0" max="96" value="32" onchange="changeROIw()" class="box green"><br>
+            ROI-height:<input type="form" id="roi_h" min="0" max="96" value="32" onchange="changeROIh()" class="box green">
+            <button class="parent blue" id="addROI_btn" onclick="addROI()">
                 Add ROI 32x32<br>
             </button>
         </div>
@@ -112,7 +118,6 @@
 
 <script src="matrix3d.js"></script>
 <script>
-
 </script>
 
 </body>

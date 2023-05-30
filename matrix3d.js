@@ -14,7 +14,8 @@ var effective_image_width = 1600;
 var effective_image_height = 900;
 
 var ROICount = 0;
-var activeROI = {width:32,height:32,rotation:0};
+var ROIs = [];
+var activeROI = {width:32,height:32,rotation:0,scaleX:1,scaleY:1};
 var activeTransfom = [];
 var img_from = [{x:0,y:0},{x:0,y:31},{x:31,y:0},{x:31,y:31}];
 
@@ -101,9 +102,12 @@ function getTransformedPosition(untransformed){
 }
 
 function addROI(){
+  var new_roi = {};
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   cleanActiveTransform();
   const matrix =  getRoundedTransform();
+  new_roi.matrix = activeTransfom;
+  new_roi.roi = activeROI;
   console.log("add ROI with 3D transform");
   const roi = document.createElement("div");
   roi.className = "box roi";
@@ -130,6 +134,7 @@ function addROI(){
     }
   }
   roi.appendChild(i);
+  ROIs.push(new_roi);
   document.getElementById("app").appendChild(roi);
 }
 
@@ -165,18 +170,24 @@ function drawOverlayInCanvas()
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "rgba(221, 21, 221, 0.8)";
-  ctx.font = "50px Arial";
-  ctx.fillText(activeROI.tl.x+","+activeROI.tl.y, activeROI.tl.x - 200, activeROI.tl.y - 30,140);
-  ctx.fillText(activeROI.bl.x+","+activeROI.bl.y, activeROI.bl.x - 200, activeROI.bl.y + 30,140);
-  ctx.fillText(activeROI.br.x+","+activeROI.br.y, activeROI.br.x + 50, activeROI.br.y + 30,140);
-  ctx.fillText(activeROI.tr.x+","+activeROI.tr.y, activeROI.tr.x + 50, activeROI.tr.y - 30,140);
   drawHandles();
 
-  var offset_y = activeROI.br.y > activeROI.bl.y ? activeROI.br.y + 20 :  activeROI.bl.y +20;
+  ctx.fillStyle = "rgba(221, 21, 221, 0.8)";
+  ctx.font = "50px Arial";
+  ctx.fillText("TL:"+activeROI.tl.x+","+activeROI.tl.y, activeROI.tl.x - 200, activeROI.tl.y - 30,140);
+  ctx.fillText("BL:"+activeROI.bl.x+","+activeROI.bl.y, activeROI.bl.x - 200, activeROI.bl.y + 30,140);
+  ctx.fillText("BR:"+activeROI.br.x+","+activeROI.br.y, activeROI.br.x + 50, activeROI.br.y + 30,140);
+  ctx.fillText("TR:"+activeROI.tr.x+","+activeROI.tr.y, activeROI.tr.x + 50, activeROI.tr.y - 30,140);
+
+  var offset_y = activeROI.br.y > activeROI.bl.y ? activeROI.br.y + activeROI.height :  activeROI.bl.y + activeROI.height;
   if (offset_y>700){
-    offset_y = activeROI.tr.y < activeROI.tl.y ? activeROI.tr.y - 60 :  activeROI.tl.y - 60;
+    offset_y = activeROI.tr.y < activeROI.tl.y ? activeROI.tr.y - (activeROI.height * 2) :  activeROI.tl.y - (activeROI.height * 2);
   }
+
+  ctx.beginPath();
+  ctx.rect(activeROI.bl.x - 10, offset_y, activeROI.width + 20, activeROI.height + 20);
+  ctx.fill(); 
+
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   var source_img = document.getElementById("full-image");
   for(_x=0;_x<activeROI.width;_x++)
@@ -187,7 +198,6 @@ function drawOverlayInCanvas()
       ctx.drawImage(source_img,pixel.x,pixel.y, 1, 1, _x + activeROI.bl.x, offset_y + _y + 10, 1, 1);
     }
   }
-
 }
 
 function mouseUp(e) {
@@ -242,18 +252,18 @@ function mouseDown(e) {
       dragBR = true;
   }
   // (5.) none of them
-  else {
-    const dx = activeROI.tl.x - mouseX;
-    const dy = activeROI.tl.y - mouseY;
-    activeROI.tl.x -= dx;
-    activeROI.tl.y -= dy;
-    activeROI.bl.x -= dx;
-    activeROI.bl.y -= dy;
-    activeROI.br.x -= dx;
-    activeROI.br.y -= dy;
-    activeROI.tr.x -= dx;
-    activeROI.tr.y -= dy;
-  }
+  // else if(dragWholeRect) {
+  //   const dx = activeROI.tl.x - mouseX;
+  //   const dy = activeROI.tl.y - mouseY;
+  //   activeROI.tl.x -= dx;
+  //   activeROI.tl.y -= dy;
+  //   activeROI.bl.x -= dx;
+  //   activeROI.bl.y -= dy;
+  //   activeROI.br.x -= dx;
+  //   activeROI.br.y -= dy;
+  //   activeROI.tr.x -= dx;
+  //   activeROI.tr.y -= dy;
+  // }
   drawOverlayInCanvas();
 }
 
@@ -262,19 +272,20 @@ function mouseMove(e) {
   var pos = getMousePos(this,e);
   mouseX = pos.x;
   mouseY = pos.y;
+
   if (dragWholeRect) {
       e.preventDefault();
       e.stopPropagation();
-      dx = mouseX - startX;
-      dy = mouseY - startY;
-      if ((rect.left+dx)>0 && (rect.left+dx+rect.width)<canvas.width){
-        rect.left += dx;
-      }
-      if ((rect.top+dy)>0 && (rect.top+dy+rect.height)<canvas.height){
-        rect.top += dy;
-      }
-      startX = mouseX;
-      startY = mouseY;
+      const dx = activeROI.tl.x - mouseX;
+      const dy = activeROI.tl.y - mouseY;
+      activeROI.tl.x -= dx;
+      activeROI.tl.y -= dy;
+      activeROI.bl.x -= dx;
+      activeROI.bl.y -= dy;
+      activeROI.br.x -= dx;
+      activeROI.br.y -= dy;
+      activeROI.tr.x -= dx;
+      activeROI.tr.y -= dy;
   } else if (dragTL) {
       e.preventDefault();
       e.stopPropagation();
@@ -314,24 +325,57 @@ function initRect(){
   activeROI.tr = {x:activeROI.width-1,y:0};
 }
 
+function updateActiveROI(){
+  activeROI.tl =  getTransformedPosition({x:0,y:0});
+  activeROI.bl =  getTransformedPosition({x:0,y:activeROI.height-1});
+  activeROI.br =  getTransformedPosition({x:activeROI.width-1,y:activeROI.height-1});
+  activeROI.tr =  getTransformedPosition({x:activeROI.width-1,y:0});
+  drawOverlayInCanvas();
+  console.log(activeTransfom);
+}
+
 function getKeypress(e) {
   // console.l og(e.code);
   if(e.code == "KeyR"){
     console.log(activeTransfom);
-    activeROI.rotation += 0.1;
+    activeROI.rotation += 0.05;
     if(e.shiftKey){
-      activeROI.rotation -= 0.2;
+      activeROI.rotation -= 0.1;
     }
-    activeTransfom[0][0] = (Math.cos(activeROI.rotation)).toString();
-    activeTransfom[0][1] = (Math.sin(activeROI.rotation)).toString();
-    activeTransfom[1][0] = (-1 * Math.sin(activeROI.rotation)).toString();
-    activeTransfom[1][1] = (Math.cos(activeROI.rotation)).toString();
-    activeROI.tl =  getTransformedPosition({x:0,y:0});
-    activeROI.bl =  getTransformedPosition({x:0,y:activeROI.height-1});
-    activeROI.br =  getTransformedPosition({x:activeROI.width-1,y:activeROI.height-1});
-    activeROI.tr =  getTransformedPosition({x:activeROI.width-1,y:0});
-    drawOverlayInCanvas();
-    console.log(activeTransfom);
+    activeTransfom[0][0] = (Math.cos(activeROI.rotation) * activeROI.scaleX).toString();
+    activeTransfom[0][1] = (Math.sin(activeROI.rotation) * activeROI.scaleX).toString();
+    activeTransfom[1][0] = (-1 * Math.sin(activeROI.rotation) * activeROI.scaleY).toString();
+    activeTransfom[1][1] = (Math.cos(activeROI.rotation) * activeROI.scaleY).toString();
+    updateActiveROI();
+  }
+  else if(e.code == "KeyX"){
+    if(e.shiftKey){
+      activeTransfom[0][0] = (Number(activeTransfom[0][0])*0.95).toString();
+      activeTransfom[0][1] = (Number(activeTransfom[0][1])*0.95).toString();
+      activeROI.scaleX *= 0.95;
+    }
+    else{
+      activeTransfom[0][0] = (Number(activeTransfom[0][0])*1.05).toString();
+      activeTransfom[0][1] = (Number(activeTransfom[0][1])*1.05).toString();
+      activeROI.scaleX *= 1.05;
+    }
+    updateActiveROI();
+  }
+  else if(e.code == "KeyY"){
+    if(e.shiftKey){
+      activeTransfom[1][1] = (Number(activeTransfom[1][1])*0.95).toString();
+      activeTransfom[1][0] = (Number(activeTransfom[1][0])*0.95).toString();
+      activeROI.scaleY *= 0.95;
+    }
+    else{
+      activeTransfom[1][1] = (Number(activeTransfom[1][1])*1.05).toString();
+      activeTransfom[1][0] = (Number(activeTransfom[1][0])*1.05).toString();
+      activeROI.scaleY *= 1.05;
+    }
+    updateActiveROI();
+  }
+  else if(e.code == "KeyG"){
+    dragWholeRect = !dragWholeRect;
   }
 }
 

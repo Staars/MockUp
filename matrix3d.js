@@ -17,11 +17,12 @@ var ROICount = 0;
 var ROIs = [];
 var activeROI = {width:32,height:32,rotation:0,scaleX:1,scaleY:1};
 var activeTransfom = [];
+var exportTransform = {width:32,height:32,scaleX:1,scaleY:1,shearX:0,shearY:0,transX:0,transY:0};
 var img_from = [{x:0,y:0},{x:0,y:31},{x:31,y:0},{x:31,y:31}];
 
 
 function getTransform(from, to) {
-  console.log(from, to);
+  // console.log(from, to);
   var A, H, b, h, i, k_i, lhs, rhs, _i, _j, _k, _ref;
   console.assert((from.length === (_ref = to.length) && _ref === 4));
   A = [];
@@ -56,24 +57,30 @@ function getTransform(from, to) {
     })());
   }
   activeTransfom = _results;
-  // console.log(_results);
+  exportTransform.scaleX = Number(_results[0][0]);
+  exportTransform.shearX = Number(_results[0][1]);
+  exportTransform.transX = Number(_results[3][0]);
+  exportTransform.shearY = Number(_results[1][0]);
+  exportTransform.scaleY = Number(_results[1][1]);
+  exportTransform.transY = Number(_results[3][1]);
+  console.log(_results);
   // getTransformedPosition({x:0,y:0});
   // getTransformedPosition({x:0,y:31});
   // getTransformedPosition({x:31,y:0});
   // getTransformedPosition({x:31,y:31});
 };
 
-function getRoundedTransform(){
-  var result = ""
-  for(i=0;i<4;i++)
-  {
-  for(j=0;j<4;j++) {
-    result += (Math.round(activeTransfom[j][i] * 10000)/10000) + ", ";
-    }
-    result += "<br>";
-  }
-  return result;
-}
+// function getRoundedTransform(){
+//   var result = ""
+//   for(i=0;i<4;i++)
+//   {
+//   for(j=0;j<4;j++) {
+//     result += (Math.round(activeTransfom[j][i] * 10000)/10000) + ", ";
+//     }
+//     result += "<br>";
+//   }
+//   return result;
+// }
 
 function cleanActiveTransform(){
   for(i=2;i<4;i++)
@@ -85,6 +92,15 @@ function cleanActiveTransform(){
 }
 
 function getTransformedPosition(untransformed){
+  var transformed = {}
+  transformed.x = Math.round((untransformed.x * exportTransform.scaleX) + (untransformed.y * exportTransform.shearY) + (exportTransform.transX));
+  transformed.y = Math.round((untransformed.x * exportTransform.shearX) + (untransformed.y * exportTransform.scaleY) + (exportTransform.transY));
+  console.log(transformed);
+  return transformed;
+}
+
+
+function getTransformedPosition_legacy(untransformed){
   var Q = [];
   var P = [untransformed.x,untransformed.y,1,1];
   for(i=0;i<4;i++)
@@ -97,7 +113,6 @@ function getTransformedPosition(untransformed){
   var transformed = {}
   transformed.x = Math.round(Q[0]);
   transformed.y = Math.round(Q[1]);
-  // console.log(transformed);
   return transformed;
 }
 
@@ -105,7 +120,8 @@ function addROI(){
   var new_roi = {};
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   cleanActiveTransform();
-  const matrix =  getRoundedTransform();
+  const descriptor = "scaleX: "+exportTransform.scaleX+"<br>shearY: "+exportTransform.shearY+"<br>transX: "+exportTransform.transX+
+                     "<br>scaleY: "+exportTransform.scaleY+"<br>shearX: "+exportTransform.shearX+"<br>transY: "+exportTransform.transY;
   new_roi.matrix = activeTransfom;
   new_roi.roi = activeROI;
   console.log("add ROI with 3D transform");
@@ -116,7 +132,7 @@ function addROI(){
   ROICount += 1;
   const t = document.createElement("p");
   const roi_size = " "+activeROI.width+"x"+activeROI.height+" ";
-  t.innerHTML = roi.id + roi_size + "<hr>" + matrix;
+  t.innerHTML = roi.id + roi_size + "<hr>" + descriptor;
   roi.appendChild(t);
   const i = document.createElement("canvas");
   i.id = roi.id + "_cv"
@@ -229,13 +245,7 @@ function mouseDown(e) {
   var pos = getMousePos(this,e);
   mouseX = pos.x;
   mouseY = pos.y;
-  // 0. inside movable rectangle
-  // if (checkInRect(mouseX, mouseY, rect)){
-  //     dragWholeRect=true;
-  //     startX = mouseX;
-  //     startY = mouseY;
-  // }
-  // 1. top left
+
   if (checkCloseEnough(mouseX, activeROI.tl.x) && checkCloseEnough(mouseY, activeROI.tl.y)) {
       dragTL = true;
   }
@@ -251,19 +261,6 @@ function mouseDown(e) {
   else if (checkCloseEnough(mouseX, activeROI.br.x) && checkCloseEnough(mouseY, activeROI.br.y)) {
       dragBR = true;
   }
-  // (5.) none of them
-  // else if(dragWholeRect) {
-  //   const dx = activeROI.tl.x - mouseX;
-  //   const dy = activeROI.tl.y - mouseY;
-  //   activeROI.tl.x -= dx;
-  //   activeROI.tl.y -= dy;
-  //   activeROI.bl.x -= dx;
-  //   activeROI.bl.y -= dy;
-  //   activeROI.br.x -= dx;
-  //   activeROI.br.y -= dy;
-  //   activeROI.tr.x -= dx;
-  //   activeROI.tr.y -= dy;
-  // }
   drawOverlayInCanvas();
 }
 
@@ -326,56 +323,62 @@ function initRect(){
 }
 
 function updateActiveROI(){
+  activeTransfom[0][0] = (Math.cos(activeROI.rotation) * (activeROI.scaleX)).toString();
+  activeTransfom[0][1] = (Math.sin(activeROI.rotation) * (activeROI.scaleX)).toString();
+  activeTransfom[1][0] = (-1 * Math.sin(activeROI.rotation) * (activeROI.scaleY)).toString();
+  activeTransfom[1][1] = (Math.cos(activeROI.rotation) * (activeROI.scaleY)).toString();
+
+  exportTransform.scaleX = Number(activeTransfom[0][0]);
+  exportTransform.shearX = Number(activeTransfom[0][1]);
+  exportTransform.transX = Number(activeTransfom[3][0]);
+  exportTransform.shearY = Number(activeTransfom[1][0]);
+  exportTransform.scaleY = Number(activeTransfom[1][1]);
+  exportTransform.transY = Number(activeTransfom[3][1]);
+
   activeROI.tl =  getTransformedPosition({x:0,y:0});
   activeROI.bl =  getTransformedPosition({x:0,y:activeROI.height-1});
   activeROI.br =  getTransformedPosition({x:activeROI.width-1,y:activeROI.height-1});
   activeROI.tr =  getTransformedPosition({x:activeROI.width-1,y:0});
   drawOverlayInCanvas();
-  console.log(activeTransfom);
+  console.log(activeROI);
 }
 
 function getKeypress(e) {
   // console.l og(e.code);
+  var _valid_key = false;
   if(e.code == "KeyR"){
-    console.log(activeTransfom);
+    // console.log(activeTransfom);
+    _valid_key = true;
     activeROI.rotation += 0.05;
     if(e.shiftKey){
       activeROI.rotation -= 0.1;
     }
-    activeTransfom[0][0] = (Math.cos(activeROI.rotation) * activeROI.scaleX).toString();
-    activeTransfom[0][1] = (Math.sin(activeROI.rotation) * activeROI.scaleX).toString();
-    activeTransfom[1][0] = (-1 * Math.sin(activeROI.rotation) * activeROI.scaleY).toString();
-    activeTransfom[1][1] = (Math.cos(activeROI.rotation) * activeROI.scaleY).toString();
-    updateActiveROI();
   }
   else if(e.code == "KeyX"){
+    _valid_key = true;
     if(e.shiftKey){
-      activeTransfom[0][0] = (Number(activeTransfom[0][0])*0.95).toString();
-      activeTransfom[0][1] = (Number(activeTransfom[0][1])*0.95).toString();
       activeROI.scaleX *= 0.95;
     }
     else{
-      activeTransfom[0][0] = (Number(activeTransfom[0][0])*1.05).toString();
-      activeTransfom[0][1] = (Number(activeTransfom[0][1])*1.05).toString();
       activeROI.scaleX *= 1.05;
     }
-    updateActiveROI();
   }
   else if(e.code == "KeyY"){
+    _valid_key = true;
     if(e.shiftKey){
-      activeTransfom[1][1] = (Number(activeTransfom[1][1])*0.95).toString();
-      activeTransfom[1][0] = (Number(activeTransfom[1][0])*0.95).toString();
       activeROI.scaleY *= 0.95;
     }
     else{
-      activeTransfom[1][1] = (Number(activeTransfom[1][1])*1.05).toString();
-      activeTransfom[1][0] = (Number(activeTransfom[1][0])*1.05).toString();
       activeROI.scaleY *= 1.05;
     }
-    updateActiveROI();
+    
   }
   else if(e.code == "KeyG"){
+    _valid_key = true;
     dragWholeRect = !dragWholeRect;
+  }
+  if(_valid_key){
+    updateActiveROI();
   }
 }
 
@@ -385,6 +388,12 @@ function resetTransformInPosition(){
   activeTransfom[0][1] = "0";
   activeTransfom[1][0] = "0";
   activeTransfom[1][1] = "1";
+
+  exportTransform.scaleX = 1;
+  exportTransform.shearX = 0;
+  exportTransform.shearY = 0;
+  exportTransform.scaleY = 1;
+
   const x = Number(activeTransfom[3][0]);
   const y = Number(activeTransfom[3][1]);
   activeROI.tl.x = x;

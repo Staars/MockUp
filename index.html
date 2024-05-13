@@ -73,13 +73,11 @@
    }
     
    .boxl {
-    flex: 0 1 700px; /*  No stretching: */
+    /* flex: 0 1 700px;  No stretching: */
     margin: 5px;
     padding: 1em;
     border-radius: 1rem;
    }
-
-
 
 </style>
 <body>
@@ -87,9 +85,8 @@
         <br><h1>ROI-Editor</h1><br>
     </div>
     <div class="parent" id="app">
-        <div class="boxl green">Image<hr>
-          <img id="full-image" src="watermeter.jpg"
-             style="position:relative">
+        <div class="boxl green"><span id="img-header"></span>
+          <img id="full-image" style="position:relative">
           <canvas id="canvas"
              style="position:absolute; left: 0px; top: 0px">
           </canvas>

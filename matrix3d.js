@@ -329,6 +329,7 @@ function mouseMove(e) {
 }
 
 function initCanvas(){
+  console.log("Init canvas");
   canvas.height = image.height;
   canvas.width = image.width;
   canvas.style.top = image.offsetTop + "px";;
@@ -337,6 +338,7 @@ function initCanvas(){
 }
 
 function initRect(){
+  console.log("Init rect");
   activeROI.tl = {x:0,y:0};
   activeROI.bl = {x:0,y:activeROI.height-1};
   activeROI.br = {x:activeROI.width-1,y:activeROI.height-1};
@@ -458,6 +460,18 @@ function redrawOnResize(){
   drawOverlayInCanvas();
 }
 
+function showImageSize(){
+  console.log(image);
+  document.getElementById('image-size').innerHTML = "Camera image: "+image.width+"x"+image.height;
+  // document.getElementById('img-header').innerText = "Image: "+image.width+"x"+image.height;
+  console.log("Image loaded");
+  initCanvas();
+  initRect();
+  drawOverlayInCanvas();
+  window.onresize = redrawOnResize;
+  image.resize = init;
+}
+
 function init(){
   canvas.addEventListener('mousedown', mouseDown, false);
   canvas.addEventListener('mouseup', mouseUp, false);
@@ -466,11 +480,12 @@ function init(){
   canvas.addEventListener('touchmove', mouseMove);
   canvas.addEventListener('touchend', mouseUp);
   window.addEventListener("keydown", getKeypress);
-  window.onresize = redrawOnResize;
-  initCanvas();
-  initRect();
-  drawOverlayInCanvas();
-  document.getElementById('image-size').innerHTML = "Image: "+image.width+"x"+image.height;
+
+  // image.src = "https://raw.githubusercontent.com/Staars/MockUp/main/watermeter.jpg";
+  image.src = "http://192.168.1.218:81/stream";
+
+  image.onload = showImageSize;
+
 }
 
-window.addEventListener('load',init)
+init();

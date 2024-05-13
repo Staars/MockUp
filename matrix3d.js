@@ -63,7 +63,7 @@ function getTransform(from, to) {
   exportTransform.shearY = Number(_results[1][0]);
   exportTransform.scaleY = Number(_results[1][1]);
   exportTransform.transY = Number(_results[3][1]);
-  console.log(_results);
+  //console.log(_results);
   // getTransformedPosition({x:0,y:0});
   // getTransformedPosition({x:0,y:31});
   // getTransformedPosition({x:31,y:0});
@@ -95,7 +95,7 @@ function getTransformedPosition(untransformed){
   var transformed = {}
   transformed.x = Math.round((untransformed.x * exportTransform.scaleX) + (untransformed.y * exportTransform.shearY) + (exportTransform.transX));
   transformed.y = Math.round((untransformed.x * exportTransform.shearX) + (untransformed.y * exportTransform.scaleY) + (exportTransform.transY));
-  console.log(transformed);
+  //console.log(transformed);
   return transformed;
 }
 
@@ -120,8 +120,8 @@ function addROI(){
   var new_roi = {};
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   cleanActiveTransform();
-  const descriptor = "scaleX: "+exportTransform.scaleX+"<br>shearY: "+exportTransform.shearY+"<br>transX: "+exportTransform.transX+
-                     "<br>scaleY: "+exportTransform.scaleY+"<br>shearX: "+exportTransform.shearX+"<br>transY: "+exportTransform.transY;
+  //const descriptor = "scaleX: "+exportTransform.scaleX+"<br>shearY: "+exportTransform.shearY+"<br>transX: "+exportTransform.transX+"<br>scaleY: "+exportTransform.scaleY+"<br>shearX: "+exportTransform.shearX+"<br>transY: "+exportTransform.transY;
+  const descriptor = {"scaleX":exportTransform.scaleX,"shearY":exportTransform.shearY,"transX":exportTransform.transX,"scaleY":exportTransform.scaleY,"shearX":exportTransform.shearX,"transY":exportTransform.transY}
   new_roi.matrix = activeTransfom;
   new_roi.roi = activeROI;
   console.log("add ROI with 3D transform");
@@ -132,7 +132,7 @@ function addROI(){
   ROICount += 1;
   const t = document.createElement("p");
   const roi_size = " "+activeROI.width+"x"+activeROI.height+" ";
-  t.innerHTML = roi.id + roi_size + "<hr>" + descriptor;
+  t.innerHTML = roi.id + roi_size + "<hr>" + JSON.stringify(descriptor, null, "\t");
   roi.appendChild(t);
   const i = document.createElement("canvas");
   i.id = roi.id + "_cv"
@@ -340,22 +340,21 @@ function updateActiveROI(){
   activeROI.br =  getTransformedPosition({x:activeROI.width-1,y:activeROI.height-1});
   activeROI.tr =  getTransformedPosition({x:activeROI.width-1,y:0});
   drawOverlayInCanvas();
-  console.log(activeROI);
+  console.log("Updated ROI:",activeROI);
 }
 
 function getKeypress(e) {
-  // console.l og(e.code);
-  var _valid_key = false;
-  if(e.code == "KeyR"){
+  // console.log(e.code);
+
+  let key = e.code
+  if(key == "KeyR"){
     // console.log(activeTransfom);
-    _valid_key = true;
     activeROI.rotation += 0.05;
     if(e.shiftKey){
       activeROI.rotation -= 0.1;
     }
   }
-  else if(e.code == "KeyX"){
-    _valid_key = true;
+  else if(key == "KeyX"){
     if(e.shiftKey){
       activeROI.scaleX *= 0.95;
     }
@@ -363,8 +362,7 @@ function getKeypress(e) {
       activeROI.scaleX *= 1.05;
     }
   }
-  else if(e.code == "KeyY"){
-    _valid_key = true;
+  else if(key == "KeyY" || key == "KeyZ"){
     if(e.shiftKey){
       activeROI.scaleY *= 0.95;
     }
@@ -373,16 +371,20 @@ function getKeypress(e) {
     }
     
   }
-  else if(e.code == "KeyG"){
-    _valid_key = true;
+  else if(key == "KeyG"){
     dragWholeRect = !dragWholeRect;
   }
-  if(_valid_key){
-    updateActiveROI();
+  else if(key == "Digit0"){
+    resetTransformInPosition(true);
   }
+  else{
+    console.log(key);
+    return;
+  }
+  updateActiveROI();
 }
 
-function resetTransformInPosition(){
+function resetTransformInPosition(withScaleRot){
   // console.log(activeTransfom);
   activeTransfom[0][0] = "1";
   activeTransfom[0][1] = "0";
@@ -404,6 +406,11 @@ function resetTransformInPosition(){
   activeROI.br.y = y + activeROI.height;
   activeROI.tr.x = x + activeROI.width;
   activeROI.tr.y = y;
+  if(withScaleRot){
+    activeROI.rotation = 0;
+    activeROI.scaleX = 1;
+    activeROI.scaleY = 1;
+  }
   // console.log(activeTransfom);
   drawOverlayInCanvas();
 }

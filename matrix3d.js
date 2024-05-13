@@ -10,8 +10,8 @@ var dragWholeRect = false;
 var mouseX, mouseY
 var startX, startY
 
-var effective_image_width = 1600;
-var effective_image_height = 900;
+// var effective_image_width = 1600;
+// var effective_image_height = 900;
 
 var ROICount = 0;
 var ROIs = [];
@@ -20,6 +20,19 @@ var activeTransfom = [];
 var exportTransform = {width:32,height:32,scaleX:1,scaleY:1,shearX:0,shearY:0,transX:0,transY:0};
 var img_from = [{x:0,y:0},{x:0,y:31},{x:31,y:0},{x:31,y:31}];
 
+// const mmultiply = (a, b) => a.map(x => transpose(b).map(y => dotproduct(x, y)));
+// const dotproduct = (a, b) => a.map((x, i) => a[i] * b[i]).reduce((m, n) => m + n);
+// const transpose = a => a[0].map((x, i) => a.map(y => y[i]));
+
+function dotProduct(matrix, vec){
+  var product = [0,0,0,0]
+  let n = matrix.length
+  for (let i = 0; i < n; i++){
+    product[i] = matrix[i][0] * vec[i] + matrix[i][1] * vec[i] + matrix[i][2] * vec[i] + matrix[i][3] * vec[i];
+  }
+  return product;
+
+}
 
 function getTransform(from, to) {
   // console.log(from, to);
@@ -39,8 +52,12 @@ function getTransform(from, to) {
   H = [[h[0], h[1], 0, h[2]], [h[3], h[4], 0, h[5]], [0, 0, 1, 0], [h[6], h[7], 0, 1]];
   for (i = _k = 0; _k < 4; i = ++_k) {
     lhs = numeric.dot(H, [from[i].x, from[i].y, 0, 1]);
+    // console.log("lhs",lhs)
+    // lhs = dotProduct(H, [from[i].x, from[i].y, 0, 1]);
+    // console.log(lhs);
     k_i = lhs[3];
     rhs = numeric.dot(k_i, [to[i].x, to[i].y, 0, 1]);
+    // rhs = dotProduct(k_i, [to[i].x, to[i].y, 0, 1]);
     console.assert(numeric.norm2(numeric.sub(lhs, rhs)) < 1e-9, "Not equal:", lhs, rhs);
   }
   // return H;
@@ -121,7 +138,7 @@ function addROI(){
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
   cleanActiveTransform();
   //const descriptor = "scaleX: "+exportTransform.scaleX+"<br>shearY: "+exportTransform.shearY+"<br>transX: "+exportTransform.transX+"<br>scaleY: "+exportTransform.scaleY+"<br>shearX: "+exportTransform.shearX+"<br>transY: "+exportTransform.transY;
-  const descriptor = {"scaleX":exportTransform.scaleX,"shearY":exportTransform.shearY,"transX":exportTransform.transX,"scaleY":exportTransform.scaleY,"shearX":exportTransform.shearX,"transY":exportTransform.transY}
+  const descriptor = {"width":activeROI.width,"height":activeROI.height,"scaleX":exportTransform.scaleX,"shearY":exportTransform.shearY,"transX":exportTransform.transX,"scaleY":exportTransform.scaleY,"shearX":exportTransform.shearX,"transY":exportTransform.transY}
   new_roi.matrix = activeTransfom;
   new_roi.roi = activeROI;
   console.log("add ROI with 3D transform");
@@ -266,6 +283,7 @@ function mouseDown(e) {
 
 
 function mouseMove(e) {
+
   var pos = getMousePos(this,e);
   mouseX = pos.x;
   mouseY = pos.y;
@@ -303,6 +321,9 @@ function mouseMove(e) {
       e.stopPropagation();
       activeROI.br.x = mouseX;
       activeROI.br.y = mouseY;
+  }
+  else{
+    return;
   }
   drawOverlayInCanvas();
 }
@@ -431,6 +452,12 @@ function updateAddROI_btn(){
   resetTransformInPosition();
 }
 
+function redrawOnResize(){
+  initCanvas();
+  initRect();
+  drawOverlayInCanvas();
+}
+
 function init(){
   canvas.addEventListener('mousedown', mouseDown, false);
   canvas.addEventListener('mouseup', mouseUp, false);
@@ -439,6 +466,7 @@ function init(){
   canvas.addEventListener('touchmove', mouseMove);
   canvas.addEventListener('touchend', mouseUp);
   window.addEventListener("keydown", getKeypress);
+  window.onresize = redrawOnResize;
   initCanvas();
   initRect();
   drawOverlayInCanvas();

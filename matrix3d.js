@@ -1,6 +1,7 @@
 
-var image = document.getElementById('full-image');
-var canvas = document.getElementById('canvas')
+const eb = (i) => document.getElementById(i);
+var image = eb('full-image');
+var canvas = eb('canvas');
 
 var handleRadius = 10
 
@@ -157,7 +158,7 @@ function addROI(){
   i.height = activeROI.height*2;
   var ctx = i.getContext("2d");
   ctx.scale(2, 2);
-  var source_img = document.getElementById("full-image");
+  var source_img = eb("full-image");
   for(_x=0;_x<activeROI.width;_x++)
     {
     var temp = 0; 
@@ -168,7 +169,7 @@ function addROI(){
   }
   roi.appendChild(i);
   ROIs.push(new_roi);
-  document.getElementById("app").appendChild(roi);
+  eb("app").appendChild(roi);
 }
 
 function drawCircle(x, y, radius) {
@@ -222,7 +223,7 @@ function drawOverlayInCanvas()
   ctx.fill(); 
 
   getTransform(img_from,[activeROI.tl,activeROI.bl,activeROI.tr,activeROI.br]);
-  var source_img = document.getElementById("full-image");
+  var source_img = eb("full-image");
   for(_x=0;_x<activeROI.width;_x++)
     {
     var temp = 0; 
@@ -376,6 +377,7 @@ function getKeypress(e) {
     if(e.shiftKey){
       activeROI.rotation -= 0.1;
     }
+    eb("roi_r").value = activeROI.rotation;
   }
   else if(key == "KeyX"){
     if(e.shiftKey){
@@ -384,6 +386,7 @@ function getKeypress(e) {
     else{
       activeROI.scaleX *= 1.05;
     }
+    eb("roi_scX").value = activeROI.scaleX;
   }
   else if(key == "KeyY" || key == "KeyZ"){
     if(e.shiftKey){
@@ -392,7 +395,7 @@ function getKeypress(e) {
     else{
       activeROI.scaleY *= 1.05;
     }
-    
+    eb("roi_scY").value = activeROI.scaleY;
   }
   else if(key == "KeyG"){
     dragWholeRect = !dragWholeRect;
@@ -439,13 +442,28 @@ function resetTransformInPosition(withScaleRot){
 }
 
 function changeROIw(sender){
-  activeROI.width = Number(document.getElementById("roi_w").value);
+  activeROI.width = Number(eb("roi_w").value);
   updateAddROI_btn();
 }
 
 function changeROIh(sender){
-  activeROI.height = Number(document.getElementById("roi_h").value);
+  activeROI.height = Number(eb("roi_h").value);
   updateAddROI_btn();
+}
+
+function changeROIr(sender){
+  activeROI.rotation = Number(eb("roi_r").value);
+  updateActiveROI();
+}
+
+function changeROIscX(sender){
+  activeROI.scaleX = Number(eb("roi_scX").value);
+  updateActiveROI();
+}
+
+function changeROIscY(sender){
+  activeROI.scaleY = Number(eb("roi_scY").value);
+  updateActiveROI();
 }
 
 function updateAddROI_btn(){
@@ -481,8 +499,8 @@ function init(){
   canvas.addEventListener('touchend', mouseUp);
   window.addEventListener("keydown", getKeypress);
 
-  // image.src = "https://raw.githubusercontent.com/Staars/MockUp/main/watermeter.jpg";
-  image.src = "http://192.168.1.218:81/stream";
+  image.src = "https://raw.githubusercontent.com/Staars/MockUp/main/watermeter.jpg";
+  // image.src = "http://192.168.1.218:81/stream";
 
   image.onload = showImageSize;
 

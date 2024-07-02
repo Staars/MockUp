@@ -490,6 +490,53 @@ function showImageSize(){
   image.resize = init;
 }
 
+function preventDefaults (e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function highlight(e) {
+  image.classList.add('highlight');
+}
+
+function unhighlight(e) {
+  image.classList.remove('active');
+}
+
+function handleDrop(e) {
+  var dt = e.dataTransfer;
+  var files = dt.files;
+  handleFiles(files);
+}
+
+function handleFiles(files) {
+  files = [...files];
+  file = files[0];
+  let reader = new FileReader()
+  reader.readAsDataURL(file)
+  reader.onloadend = function() {
+    // let img = document.createElement('img')
+    image.src = reader.result
+    // document.getElementById('gallery').appendChild(img)
+  }
+  showImageSize();
+}
+
+
+function prepareImageDrop(){
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { 
+                canvas.addEventListener(eventName, preventDefaults, false);   
+                  document.body.addEventListener(eventName, preventDefaults, false);
+                });
+  ['dragenter', 'dragover'].forEach(eventName => {
+                canvas.addEventListener(eventName, highlight, false);
+                });
+  ['dragleave', 'drop'].forEach(eventName => {
+                canvas.addEventListener(eventName, unhighlight, false);
+                });
+                canvas.addEventListener('drop', handleDrop, false);
+}
+
 function init(){
   canvas.addEventListener('mousedown', mouseDown, false);
   canvas.addEventListener('mouseup', mouseUp, false);
@@ -498,8 +545,10 @@ function init(){
   canvas.addEventListener('touchmove', mouseMove);
   canvas.addEventListener('touchend', mouseUp);
   window.addEventListener("keydown", getKeypress);
+  prepareImageDrop();
 
   image.src = "https://raw.githubusercontent.com/Staars/MockUp/main/watermeter.jpg";
+  // image.src = "wm_small.jpg";
   // image.src = "http://192.168.1.218:81/stream";
 
   image.onload = showImageSize;
